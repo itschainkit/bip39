@@ -112,8 +112,16 @@ func WordsFromFile(filePath string) ([]string, error) {
 	return result, nil
 }
 
-func Mnemonic(bits int) []string {
-	randomNumbers, err := RandomBytes(bits)
+func Mnemonic(bits int, entropy string) []string {
+	var randomNumbers []byte
+	var err error
+
+	if len(entropy) < 1 {
+		randomNumbers, err = RandomBytes(bits)
+	} else {
+		randomNumbers = []byte(entropy)
+	}
+
 	if err != nil {
 		panic(err.Error())
 	}

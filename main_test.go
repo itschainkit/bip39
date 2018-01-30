@@ -62,7 +62,12 @@ func TestWordsFromFile(t *testing.T) {
 }
 
 func TestMnemonic(t *testing.T) {
-	r := Mnemonic(128)
+	//r := Mnemonic(128, "")
+	//if len(r) != 12 {
+	//	t.Error("bip39.Mnemonic: should return a list of words")
+	//}
+	//r := Mnemonic(128, "7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f")
+	r := Mnemonic(128, "01010101f0000000")
 	if len(r) != 12 {
 		t.Error("bip39.Mnemonic: should return a list of words")
 	}
