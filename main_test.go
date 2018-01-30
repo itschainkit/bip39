@@ -78,3 +78,25 @@ func TestToDecimal(t *testing.T) {
 		t.Errorf("TestToDecimal - Invalid Decimal number %d", r)
 	}
 }
+
+func TestSeed(t *testing.T) {
+	options := make(map[string]string)
+	options["password"] = "TREZOR"
+
+	options["mnemonic"] = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon agent"
+	r, _ := Seed(options)
+	if len(r) < 1 {
+		t.Error("bip39.Seed - should return seed")
+	}
+
+	if r != "035895f2f481b1b0f01fcf8c289c794660b289981a78f8106447707fdd9666ca06da5a9a565181599b79f53b844d8a71dd9f439c52a3d7b3e8a79c906ac845fa" {
+		t.Error("bip39.Seed - should return correct seed")
+	}
+
+	options["mnemonic"] = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo when"
+	r, _ = Seed(options)
+	if r != "0cd6e5d827bb62eb8fc1e262254223817fd068a74b5b449cc2f667c3f1f985a76379b43348d952e2265b4cd129090758b3e3c2c49103b5051aac2eaeb890a528" {
+		t.Error("bip39.Seed - should return correct seed")
+	}
+
+}
