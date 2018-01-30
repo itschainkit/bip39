@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/rand"
+	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
@@ -11,6 +12,8 @@ import (
 	"io"
 	"log"
 	"os"
+
+	"golang.org/x/crypto/pbkdf2"
 )
 
 // Entropy
@@ -165,4 +168,27 @@ func ToDecimal(bitstring string) int {
 	}
 
 	return result
+}
+
+func Seed(options map[string]string) (string, error) {
+	if _, ok := options["mnemonic"]; !ok {
+		return "", errors.New("bip39.Seed: mnemonic is a required option")
+	}
+
+	mnemonic := options["mnemonic"]
+	salt := "mnemonic"
+
+	if password, ok := options["password"]; ok {
+		salt += password
+	}
+
+	//iteration = 2048
+	//hash = sha512
+	//key_length = 64 bytes / 512 bits
+	key := pbkdf2.Key([]byte(mnemonic), []byte(salt), 2048, 64, sha512.New)
+	keyHex := fmt.Sprintf("%x", key)
+
+	log.Printf("bip29.Seed: Key - %s\n", keyHex)
+
+	return keyHex, nil
 }
