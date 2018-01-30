@@ -6,35 +6,52 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
 )
 
-//Entropy default length
-const bits = 128
-
 // Entropy
-func RandomBytes() []byte {
+func RandomBytes(bits int) ([]byte, error) {
+	if bits < 128 || bits > 256 || bits%32 != 0 {
+		errorMessage := "bip39.RandomBytes - Invalid entropy range. It should be between range 128-256 and be multiple of 32 bits."
+		log.Fatal(errorMessage)
+		return nil, errors.New(errorMessage)
+	}
 	bytes := make([]byte, bits/8)
 	rand.Read(bytes)
 	log.Printf("bip39.RandomBytes %d - %v\n", len(bytes), bytes)
-	return bytes
+
+	return bytes, nil
 }
 
-func Hex(bytes []byte) string {
+func Hex(bytes []byte) (string, error) {
+	blength := len(bytes)
+	if blength < 1 {
+		return "", errors.New("bip39.Hex - input should have at least one byte")
+	}
+
 	hexBytes := make([]byte, hex.EncodedLen(len(bytes)))
 	hex.Encode(hexBytes, bytes)
 
 	result := fmt.Sprintf("%s", hexBytes)
 	log.Printf("bip39.Hex %s\n", result)
-	return result
+	return result, nil
 }
 
-func ToBinaryString(bytess []byte) string {
+func ToBinaryString(bytess []byte) (string, error) {
+	blength := len(bytess)
+	if blength < 1 {
+		return "", errors.New("bip39.ToBinaryString - input should have at least one byte")
+	}
+
 	buffer := new(bytes.Buffer)
-	binary.Write(buffer, binary.LittleEndian, bytess)
+	err := binary.Write(buffer, binary.LittleEndian, bytess)
+	if err != nil {
+		return "", errors.New("bip39.ToBinaryString - error on write binary: " + err.Error())
+	}
 
 	var sbinary string
 	for _, byte := range buffer.Bytes() {
@@ -42,46 +59,78 @@ func ToBinaryString(bytess []byte) string {
 	}
 
 	log.Printf("bip39.ToBinaryString %d - %s\n", len(sbinary), sbinary)
-	return sbinary
+	return sbinary, nil
 }
 
-func Checksum(bitstring string) string {
-	bitsToTake := bits / 32
+func Checksum(bitstring string) (string, error) {
+	blength := len(bitstring)
+	if blength < 128 {
+		return "", errors.New("bit39.Checksum - input should have at least 128 bits")
+	}
+
+	bitsToTake := len(bitstring) / 32
 	result := bitstring[:bitsToTake]
 	log.Printf("bip39.Checksum %s\n", result)
 
-	return result
+	return result, nil
 }
 
-func BinarySeed(bitstring string) string {
-	return bitstring + Checksum(bitstring)
+func BinarySeed(bitstring string) (string, error) {
+	blength := len(bitstring)
+	if blength < 128 {
+		return "", errors.New("bit39.BinarySeed - input should have at least 128 bits")
+	}
+	checksum, _ := Checksum(bitstring)
+	return (bitstring + checksum), nil
 }
 
-func WordsFromFile(filePath string) []string {
-	file, _ := os.Open(filePath)
+func WordsFromFile(filePath string) ([]string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, errors.New("bip39.WordsFromFile: Error to open file: " + err.Error())
+	}
 	defer file.Close()
 
 	reader := bufio.NewReader(file)
-	result := make([]string, 2048) //TODO: check how to take off this fixed value
+	result := make([]string, 2048) //all the files have 2048 words
 
 	for i := 0; i < 2048; i++ {
 		line, err := reader.ReadString('\n')
 		result[i] = line
-		if err != nil || err == io.EOF {
+		if err != nil && err != io.EOF {
+			return nil, errors.New("bip39.WordsFromFile: Error on read file: " + err.Error())
+		}
+
+		if err == io.EOF {
 			break
 		}
 	}
 
-	return result
+	return result, nil
 }
 
-//TODO: put it flexlible to accept bits and entropy as argument
-func Mnemonic() []string {
-	bitstring := ToBinaryString(RandomBytes())
-	binarySeed := BinarySeed(bitstring)
-	words := WordsFromFile("./english.txt")
-	chunkSize := 11
+func Mnemonic(bits int) []string {
+	randomNumbers, err := RandomBytes(bits)
+	if err != nil {
+		panic(err.Error())
+	}
 
+	bitstring, err := ToBinaryString(randomNumbers)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	binarySeed, err := BinarySeed(bitstring)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	words, err := WordsFromFile("./english.txt")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	chunkSize := 11
 	var chunks []string
 	runes := []rune(binarySeed)
 
@@ -95,17 +144,17 @@ func Mnemonic() []string {
 			nn = len(runes)
 		}
 		bitstring := string(runes[i:nn])
-		wordIndex := ToBase10(bitstring)
+		wordIndex := ToDecimal(bitstring)
 		word := words[wordIndex]
 		chunks = append(chunks, word)
 	}
 
-	fmt.Printf("bip39.Mnemonic %s\n", chunks)
+	log.Printf("bip39.Mnemonic %s\n", chunks)
 
 	return chunks
 }
 
-func ToBase10(bitstring string) int {
+func ToDecimal(bitstring string) int {
 	result := 0
 	power := 1
 	for i := len(bitstring) - 1; i >= 0; i-- {
