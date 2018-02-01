@@ -2,10 +2,8 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"crypto/rand"
 	"crypto/sha512"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -50,17 +48,7 @@ func ToBinaryString(bytess []byte) (string, error) {
 		return "", errors.New("bip39.ToBinaryString - input should have at least one byte")
 	}
 
-	buffer := new(bytes.Buffer)
-	err := binary.Write(buffer, binary.LittleEndian, bytess)
-	if err != nil {
-		return "", errors.New("bip39.ToBinaryString - error on write binary: " + err.Error())
-	}
-
-	var sbinary string
-	for _, byte := range buffer.Bytes() {
-		sbinary += fmt.Sprintf("%08b", byte)
-	}
-
+	sbinary := fmt.Sprintf("%08b", bytess)
 	log.Printf("bip39.ToBinaryString %d - %s\n", len(sbinary), sbinary)
 	return sbinary, nil
 }
