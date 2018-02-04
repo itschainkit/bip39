@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
 	"errors"
@@ -28,6 +29,7 @@ func RandomBytes(bits int) ([]byte, error) {
 	return bytes, nil
 }
 
+//TODO: Remove
 func Hex(bytes []byte) (string, error) {
 	blength := len(bytes)
 	if blength < 1 {
@@ -42,13 +44,45 @@ func Hex(bytes []byte) (string, error) {
 	return result, nil
 }
 
+func Sha256Checksum(bytess []byte) string {
+	h := sha256.New()
+	h.Write(bytess)
+	r := fmt.Sprintf("%x", h.Sum(nil))
+	log.Println("Sha256Checksum " + r)
+	return r
+}
+
+func HexToBinary(hexadecimal string) (string, error) {
+	decodedHex, error := hex.DecodeString(hexadecimal)
+	if error != nil {
+		return "", error
+	}
+
+	var binary string
+	for _, c := range decodedHex {
+		binary += fmt.Sprintf("%08b", c)
+	}
+
+	result := binary[2:]
+
+	log.Println("HexToBinary " + result)
+
+	return result, nil
+}
+
 func ToBinaryString(bytess []byte) (string, error) {
 	blength := len(bytess)
 	if blength < 1 {
 		return "", errors.New("bip39.ToBinaryString - input should have at least one byte")
 	}
-
-	sbinary := fmt.Sprintf("%08b", bytess)
+	var sbinary string
+	for _, byte := range bytess {
+		if byte == 0 {
+			sbinary += "00000000"
+		} else {
+			sbinary += fmt.Sprintf("%08b", bytess)
+		}
+	}
 	log.Printf("bip39.ToBinaryString %d - %s\n", len(sbinary), sbinary)
 	return sbinary, nil
 }
@@ -72,7 +106,9 @@ func BinarySeed(bitstring string) (string, error) {
 		return "", errors.New("bit39.BinarySeed - input should have at least 128 bits")
 	}
 	checksum, _ := Checksum(bitstring)
-	return (bitstring + checksum), nil
+	result := (bitstring + checksum)
+	log.Printf("bip39.BinarySeed %s\n", result)
+	return result, nil
 }
 
 func WordsFromFile(filePath string) ([]string, error) {
@@ -107,18 +143,22 @@ func Mnemonic(bits int, entropy string) []string {
 	if len(entropy) < 1 {
 		randomNumbers, err = RandomBytes(bits)
 	} else {
-		randomNumbers = []byte(entropy)
+		randomNumbers, err = hex.DecodeString(entropy)
 	}
 
 	if err != nil {
 		panic(err.Error())
 	}
 
-	bitstring, err := ToBinaryString(randomNumbers)
+	//TODO: WIP
+	hexa := Sha256Checksum(randomNumbers)
+	bitstring, err := HexToBinary(hexa) // ToBinaryString(randomNumbers)
+	checksum, err := Checksum(bitstring)
 	if err != nil {
 		panic(err.Error())
 	}
 
+	//binarySeed, err := BinarySeed(bitstring)
 	binarySeed, err := BinarySeed(bitstring)
 	if err != nil {
 		panic(err.Error())

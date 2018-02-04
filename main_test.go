@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"encoding/hex"
+	"strings"
+	"testing"
+)
 
 func TestRandomBytes(t *testing.T) {
 	r, err := RandomBytes(128)
@@ -24,6 +28,22 @@ func TestHex(t *testing.T) {
 	r, err := Hex(b)
 	if len(r) < 1 || err != nil {
 		t.Error("bip39.Hex should return hex representation of bytes")
+	}
+}
+
+func TestSha256Checksum(t *testing.T) {
+	input, _ := hex.DecodeString("00000000000000000000000000000000")
+	if Sha256Checksum(input) != "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb" {
+		t.Error("Wrong SHA256 Calculation")
+	}
+}
+
+func TestHexToBinary(t *testing.T) {
+	hex := "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb"
+	result, _ := HexToBinary(hex)
+	expected := "11011101000111000010001111111111110111011100011001110111010101100101111001111011001000011101011101010101101100110100100010100001101111011011010011110011110111111011000011000101111010001110110010010101100011001010101010101100101000111011000011011110111011"
+	if strings.Compare(result, expected) != 0 {
+		t.Error("Wrong Binary Number")
 	}
 }
 
@@ -62,14 +82,15 @@ func TestWordsFromFile(t *testing.T) {
 }
 
 func TestMnemonic(t *testing.T) {
-	//r := Mnemonic(128, "")
-	//if len(r) != 12 {
-	//	t.Error("bip39.Mnemonic: should return a list of words")
-	//}
 	//r := Mnemonic(128, "7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f")
-	r := Mnemonic(128, "01010101f0000000")
+	r := Mnemonic(128, "00000000000000000000000000000000")
 	if len(r) != 12 {
 		t.Error("bip39.Mnemonic: should return a list of words")
+	}
+
+	expected := "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+	if strings.Compare(strings.Join(r, ""), expected) != 0 {
+		t.Error("bip39.Mnemonic: should return right sequence of words")
 	}
 }
 
